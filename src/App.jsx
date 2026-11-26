@@ -30,11 +30,6 @@ export default function App() {
   const [videoDuration,setVideoDuration]=useState('5')
   const [videoScenes,setVideoScenes]=useState('مشهد واحد')
   const [preparedPrompt,setPreparedPrompt]=useState('')
-  const [apiBaseUrl,setApiBaseUrl]=useState(()=>localStorage.getItem('novaApiBaseUrl')||'')
-  const [apiAccessCode,setApiAccessCode]=useState(()=>localStorage.getItem('novaAccessCode')||'')
-  const [isGenerating,setIsGenerating]=useState(false)
-  const [generationMessage,setGenerationMessage]=useState('')
-  const [generatedVideoUrl,setGeneratedVideoUrl]=useState('')
   const [textOverlay,setTextOverlay]=useState('')
   const [overlayInput,setOverlayInput]=useState('')
   const [activeTool,setActiveTool]=useState('الوسائط')
@@ -110,32 +105,6 @@ export default function App() {
     const result=`أنشئ فيديو ${videoStyle} بجودة سينمائية.\nالوصف: ${videoPrompt.trim()}\nالمدة: ${videoDuration} ثوانٍ.\nالأبعاد: ${videoRatio}.\nتقسيم المشاهد: ${videoScenes}.\nحافظ على ثبات شكل الشخصيات والألوان والإضاءة بين اللقطات، مع حركة طبيعية للكاميرا والشخصيات، وتفاصيل واضحة ومناسبة للنشر.`
     setPreparedPrompt(result)
   }
-  const generateVideo=async()=>{
-    if(!videoPrompt.trim())return
-    const defaultBase=window.location.hostname.endsWith('vercel.app')?window.location.origin:''
-    const base=(apiBaseUrl.trim()||defaultBase).replace(/\/+$/,'')
-    if(!base){setGenerationMessage('أدخل رابط خادم NOVA المنشور على Vercel أولاً.');return}
-    if(!apiAccessCode.trim()){setGenerationMessage('أدخل رمز الوصول الذي تم ضبطه في إعدادات خادم NOVA.');return}
-    setIsGenerating(true);setGeneratedVideoUrl('');setGenerationMessage('جاري إرسال طلب إنشاء الفيديو...')
-    try{
-      const started=await fetch(base+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json','x-nova-access-code':apiAccessCode.trim()},body:JSON.stringify({prompt:videoPrompt,style:videoStyle,ratio:videoRatio,duration:Number(videoDuration),scenes:videoScenes})})
-      const startData=await started.json().catch(()=>({}))
-      if(!started.ok)throw new Error(startData.error||'تعذر بدء التوليد.')
-      if(!startData.taskId)throw new Error('لم يصل رقم مهمة التوليد من الخدمة.')
-      setGenerationMessage('تم إرسال الطلب. جاري إنشاء الفيديو، قد يستغرق عدة دقائق...')
-      for(let attempt=0;attempt<90;attempt++){
-        await new Promise(resolve=>setTimeout(resolve,5000))
-        const response=await fetch(base+'/api/tasks/'+encodeURIComponent(startData.taskId),{headers:{'x-nova-access-code':apiAccessCode.trim()}})
-        const task=await response.json().catch(()=>({}))
-        if(!response.ok)throw new Error(task.error||'تعذر متابعة حالة الفيديو.')
-        if(task.status==='SUCCEEDED'&&task.videoUrl){setGeneratedVideoUrl(task.videoUrl);setGenerationMessage('اكتمل الفيديو بنجاح!');return}
-        if(task.status==='FAILED'||task.status==='CANCELED')throw new Error(task.failure||'لم يكتمل إنشاء الفيديو. جرب وصفاً آخر.')
-        setGenerationMessage('جاري التوليد... الحالة: '+(task.status||'قيد الانتظار'))
-      }
-      setGenerationMessage('الفيديو ما زال قيد المعالجة. احتفظ بالتطبيق مفتوحاً ثم حاول متابعة المهمة لاحقاً.')
-    }catch(error){setGenerationMessage(error.message||'حدث خطأ أثناء إنشاء الفيديو.')}
-    finally{setIsGenerating(false)}
-  }
   const copyPreparedPrompt=async()=>{
     if(!preparedPrompt)return
     try{await navigator.clipboard.writeText(preparedPrompt);alert('تم نسخ البرومبت.')}catch{alert('تعذر النسخ تلقائياً؛ يمكنك تحديد النص ونسخه.')}
@@ -171,36 +140,21 @@ export default function App() {
           <select value={videoScenes} onChange={e=>setVideoScenes(e.target.value)}><option>مشهد واحد</option><option>عدة لقطات متتابعة</option></select>
           <button className="prepare-prompt" onClick={prepareVideoPrompt} disabled={!videoPrompt.trim()}><Sparkles size={16}/> تجهيز البرومبت</button>
           {preparedPrompt&&<div className="prepared-prompt"><b>البرومبت الجاهز</b><p>{preparedPrompt}</p><button onClick={copyPreparedPrompt}><Download size={14}/> نسخ البرومبت</button></div>}
-          <div className="generator-connection">
-            <b>إعداد الاتصال بخادم NOVA</b>
-            <label>رابط الخادم المنشور على Vercel</label>
-            <input value={apiBaseUrl} onChange={e=>{setApiBaseUrl(e.target.value);localStorage.setItem('novaApiBaseUrl',e.target.value)}} placeholder="https://اسم-مشروعك.vercel.app"/>
-            <label>رمز الوصول للتطبيق</label>
-            <input type="password" value={apiAccessCode} onChange={e=>{setApiAccessCode(e.target.value);localStorage.setItem('novaAccessCode',e.target.value)}} placeholder="رمز الوصول الذي تضبطه على Vercel"/>
+          <div className="generator-free-space">
+            <div className="generator-free-intro">
+              <b>مولّد فيديو مجاني عبر Hugging Face</b>
+              <p>جهّز البرومبت من الأعلى، انسخه، ثم الصقه داخل المولّد. اضغط على زر فتح المولّد لو احتجت مساحة أكبر.</p>
+              <a href="https://huggingface.co/spaces/Lightricks/ltx-2-distilled" target="_blank" rel="noreferrer">فتح المولّد في صفحة مستقلة</a>
+            </div>
+            <iframe
+              title="LTX-2 Video Fast by Hugging Face"
+              src="https://lightricks-ltx-2-distilled.hf.space"
+              loading="lazy"
+              allow="clipboard-read; clipboard-write; fullscreen"
+              allowFullScreen
+            />
           </div>
-          <button className="prepare-prompt" onClick={generateVideo} disabled={!videoPrompt.trim()||isGenerating}>{isGenerating?'جاري إنشاء الفيديو...':'إنشاء الفيديو الآن'}</button>
-          {generationMessage&&<div className="generation-status" role="status">{generationMessage}</div>}
-          {generatedVideoUrl&&<div className="generated-result"><b>الفيديو الناتج</b><video src={generatedVideoUrl} controls playsInline/><a href={generatedVideoUrl} target="_blank" rel="noreferrer">فتح / حفظ الفيديو</a></div>}
-          <div className="generator-notice"><b>التكلفة التقريبية</b><span>{videoScenes==='عدة لقطات متتابعة'?'المشاهد المتعددة: 13 رصيداً لكل ثانية؛ فيديو 5 ثوانٍ نحو 65 رصيداً (0.65 دولار).':'النمط الاقتصادي: رصيدان لكل ثانية؛ فيديو 5 ثوانٍ نحو 10 أرصدة (0.10 دولار).'} الأسعار حسب تسعير API الحالي، وقد تتغير.</span></div>
-        </div>:<>
-        <div className="media-heading"><b>{activeTool}</b><button className="small-btn" onClick={()=>fileRef.current?.click()}><Plus size={15}/> استيراد</button></div>
-        <button className="import-box" onClick={()=>fileRef.current?.click()}><Upload size={24}/><b>استيراد الوسائط</b><span>فيديوهات، صور، وملفات صوت</span></button>
-        <input ref={fileRef} type="file" multiple accept="video/*,audio/*,image/*" hidden onChange={e=>addFiles(e.target.files)}/>
-        <div className="asset-grid">{assets.map(a=><div key={a.id} className={`asset ${selected===a.id?'chosen':''}`} onClick={()=>setSelected(a.id)}>
-          <div className="asset-thumb">{a.type==='video'?<Video/>:a.type==='audio'?<Music2/>:<ImageIcon/>}<button className="asset-remove" onClick={e=>{e.stopPropagation();removeAsset(a.id)}}><X size={12}/></button></div>
-          <span title={a.name}>{a.name}</span><button className="small-btn" style={{marginTop:5,width:'100%',justifyContent:'center'}} onClick={e=>{e.stopPropagation();addToTimeline(a)}}><Plus size={12}/> للتايم لاين</button>
-        </div>)}</div>
-        {assets.length===0&&<div className="empty-hint">استورد ملفاتك ثم اضغط «للتايم لاين» لبدء المونتاج</div>}
-        </>}
-      </section>
-      <main className="center">
-        <div className="preview panel">
-          <div className="preview-head"><span>المعاينة</span><span className="muted">مشغل الفيديو <ChevronDown size={13}/></span></div>
-          <div className="preview-stage">
-            {isVideo?<video key={activeAsset.id} ref={videoRef} src={previewSource} onLoadedMetadata={onMeta} onTimeUpdate={e=>setCurrent(e.currentTarget.currentTime)} onEnded={()=>setPlaying(false)} />:
-             activeAsset?.type==='image'?<img src={previewSource}/>:<div className="preview-placeholder"><Film size={52}/><b>{activeAsset?.type==='audio'?'ملف صوتي محدد':'ابدأ باستيراد فيديو أو صورة'}</b><span>معاينة مشروع NOVA STUDIO AI</span></div>}
-            {textOverlay&&<div style={{position:'absolute',bottom:'18%',left:0,right:0,textAlign:'center',fontSize:28,fontWeight:800,color:'white',textShadow:'0 2px 8px #000'}}>{textOverlay}</div>}
-          </div>
+          <div className="generator-notice"><b>مهم بخصوص الاستخدام المجاني</b><span>هذا محرك مجتمعي على Hugging Face. الحساب المجاني له حصة GPU يومية محدودة (حوالي 5 دقائق في ZeroGPU)، وقد تحتاج إلى الانتظار حسب الضغط. لا يوجد ضمان لتوليد غير محدود أو سرعة ثابتة.</span></div>
           <div className="player-controls"><span className="timecode">{fmt(current)} <i>/</i> {fmt(duration)}</span><div className="transport"><button onClick={()=>seek(0)}><SkipBack size={17}/></button><button className="play" onClick={togglePlay}>{playing?<Pause size={18}/>:<Play size={18}/>}</button><button onClick={()=>seek(duration)}><SkipForward size={17}/></button></div><span className="ratio">16:9</span></div>
         </div>
         <div className="timeline panel">
