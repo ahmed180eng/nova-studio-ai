@@ -181,7 +181,7 @@ export default function App() {
           <button className="prepare-prompt" onClick={generateVideo} disabled={!videoPrompt.trim()||isGenerating}>{isGenerating?'جاري إنشاء الفيديو...':'إنشاء الفيديو الآن'}</button>
           {generationMessage&&<div className="generation-status" role="status">{generationMessage}</div>}
           {generatedVideoUrl&&<div className="generated-result"><b>الفيديو الناتج</b><video src={generatedVideoUrl} controls playsInline/><a href={generatedVideoUrl} target="_blank" rel="noreferrer">فتح / حفظ الفيديو</a></div>}
-          <div className="generator-notice"><b>التكلفة التقريبية</b><span>نستخدم مبدئياً نمطاً اقتصادياً بتكلفة 2 رصيد لكل ثانية؛ فيديو 5 ثوانٍ يقدّر بنحو 10 أرصدة (0.10 دولار)، وقد تختلف الضرائب أو إعدادات النموذج.</span></div>
+          <div className="generator-notice"><b>التكلفة التقريبية</b><span>{videoScenes==='عدة لقطات متتابعة'?'المشاهد المتعددة: 13 رصيداً لكل ثانية؛ فيديو 5 ثوانٍ نحو 65 رصيداً (0.65 دولار).':'النمط الاقتصادي: رصيدان لكل ثانية؛ فيديو 5 ثوانٍ نحو 10 أرصدة (0.10 دولار).'} الأسعار حسب تسعير API الحالي، وقد تتغير.</span></div>
         </div>:<>
         <div className="media-heading"><b>{activeTool}</b><button className="small-btn" onClick={()=>fileRef.current?.click()}><Plus size={15}/> استيراد</button></div>
         <button className="import-box" onClick={()=>fileRef.current?.click()}><Upload size={24}/><b>استيراد الوسائط</b><span>فيديوهات، صور، وملفات صوت</span></button>
