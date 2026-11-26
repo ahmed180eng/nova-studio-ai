@@ -1,7 +1,7 @@
 {
-  "name": "NOVA STUDIO AI",
-  "short_name": "NOVA STUDIO",
-  "description": "محرر فيديو عربي",
+  "name": "NOVA",
+  "short_name": "NOVA",
+  "description": "NOVA - محرر فيديو عربي",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "./",
