@@ -96,3 +96,63 @@
   .media-panel.ai-generator-panel .video-generator{max-height:none}
   .generator-free-space iframe{height:720px}
 }
+
+
+/* NOVA identity refresh — premium mobile-first editor */
+:root{--nova-bg:#090d12;--nova-panel:#111923;--nova-panel-2:#16222d;--nova-line:#243543;--nova-accent:#45e0cf;--nova-accent-2:#82f3e5;--nova-text:#f1f7f8;--nova-muted:#91a4af}
+body{background:var(--nova-bg);color:var(--nova-text)}
+.app{background:radial-gradient(ellipse at 50% -18%,#18333c 0%,#0b1118 42%,#080c11 100%)}
+.topbar{background:rgba(12,19,26,.94);border-bottom:1px solid #263944;box-shadow:0 8px 30px #0003;backdrop-filter:blur(18px)}
+.brand{gap:10px;font-size:21px;font-weight:800;letter-spacing:1.8px;color:#f5ffff}
+.brand-mark{width:39px;height:39px;border-radius:13px;background:linear-gradient(145deg,#65f1df,#1b8f91);color:#06171a;box-shadow:0 5px 22px #36d9c533;overflow:hidden}
+.brand-mark svg{width:27px;height:27px}
+.project-name{background:#182630;border:1px solid #2b414c;color:#c3d3d8;border-radius:10px}
+.export,.chat-compose button{background:linear-gradient(135deg,#69f0dd,#27b9b6);color:#061719;box-shadow:0 5px 18px #36d9c522}
+.workspace{gap:12px;padding:13px}
+.panel,.sidebar{background:linear-gradient(160deg,#15212b,#101820);border:1px solid #263a46;border-radius:16px;box-shadow:0 12px 35px #0002}
+.sidebar{padding:9px 6px}
+.nav-item{border-radius:11px;color:#91a5b0;transition:background .18s ease,color .18s ease}
+.nav-item.active,.nav-item:hover{background:linear-gradient(135deg,#174b4b,#17343d);color:var(--nova-accent-2);box-shadow:inset 0 0 0 1px #3ed7c533}
+.panel-tabs{border-color:#263a46}
+.tab.active{color:var(--nova-accent-2);border-color:var(--nova-accent)}
+.small-btn,.prepare-prompt{background:linear-gradient(135deg,#5ce8d6,#239e9d);color:#061719;font-weight:800}
+.import-box{background:linear-gradient(145deg,#172b34,#121d27);border-color:#3b6670;border-radius:13px}
+.asset-thumb{background:linear-gradient(145deg,#25424b,#182934);border-radius:10px}
+.asset.chosen .asset-thumb{border-color:var(--nova-accent);box-shadow:0 0 0 2px #45e0cf22}
+.preview,.timeline{background:linear-gradient(155deg,#15212b,#101820);border:1px solid #263a46;border-radius:16px;box-shadow:0 12px 35px #0002}
+.preview{padding:13px}
+.preview-stage{background:radial-gradient(ellipse at center,#14232c,#070b10 75%);border:1px solid #253b47;border-radius:12px}
+.preview-placeholder svg{color:#4bdacb}.preview-placeholder b{color:#e5f4f4}
+.transport .play{background:linear-gradient(135deg,#69f0dd,#239e9d);color:#061719}
+.timeline{padding:0 13px}
+.timeline-toolbar{border-color:#263a46}
+.track-content{background:#0c131a;border:1px solid #1d303b}
+.clip{background:linear-gradient(90deg,#1d6668,#19434e);border-color:#2f9b98}
+.clip.selected{border-color:var(--nova-accent);box-shadow:0 0 0 2px #45e0cf33}
+.ai-header{border-color:#263a46}
+.ai-logo,.orb{background:linear-gradient(145deg,#276c6b,#1b3541);color:#9bfff0}
+.quick-actions button{background:#172630;border-color:#2b414c;border-radius:10px}
+.message p{background:#172630;border-color:#2b414c;border-radius:11px}
+.chat-compose{background:#0b1219;border-color:#2b414c;border-radius:12px}
+.video-generator{gap:12px}
+.generator-title,.generator-free-intro,.prepared-prompt{background:linear-gradient(145deg,#172d35,#121d27);border-color:#31545b;border-radius:13px}
+.generator-prompt,.video-generator select{background:#0c141b;border-color:#2b414c;border-radius:10px}
+.generator-options button{background:#172630;border-color:#2b414c;border-radius:9px}
+.generator-options button.chosen{background:#174544;border-color:#45cdbf;color:#a4fff1}
+.generator-notice{border-radius:11px}
+.statusbar{background:#0c131a;border-color:#263a46}
+@media(max-width:760px){
+ .topbar{padding:10px 12px;min-height:62px;background:#0c151d}
+ .brand{font-size:19px}.brand-mark{width:36px;height:36px}
+ .top-actions{padding-top:7px;border-top:1px solid #20323d}
+ .workspace{padding:9px;gap:11px}
+ .sidebar{position:sticky;top:0;z-index:5;background:#111c25ed;backdrop-filter:blur(14px);border-radius:13px}
+ .nav-item{flex-basis:67px;height:57px}
+ .preview{border-radius:15px;height:min(56vh,440px)}
+ .preview-stage{min-height:205px}
+ .timeline{border-radius:15px}
+ .media-panel,.ai-panel{border-radius:15px}
+ .media-heading{padding:14px}
+ .import-box{min-height:116px}
+ .ai-panel{min-height:440px}
+}
