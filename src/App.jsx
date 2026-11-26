@@ -155,6 +155,25 @@ export default function App() {
             />
           </div>
           <div className="generator-notice"><b>مهم بخصوص الاستخدام المجاني</b><span>هذا محرك مجتمعي على Hugging Face. الحساب المجاني له حصة GPU يومية محدودة (حوالي 5 دقائق في ZeroGPU)، وقد تحتاج إلى الانتظار حسب الضغط. لا يوجد ضمان لتوليد غير محدود أو سرعة ثابتة.</span></div>
+        </div>:<>
+        <div className="media-heading"><b>{activeTool}</b><button className="small-btn" onClick={()=>fileRef.current?.click()}><Plus size={15}/> استيراد</button></div>
+        <button className="import-box" onClick={()=>fileRef.current?.click()}><Upload size={24}/><b>استيراد الوسائط</b><span>فيديوهات، صور، وملفات صوت</span></button>
+        <input ref={fileRef} type="file" multiple accept="video/*,audio/*,image/*" hidden onChange={e=>addFiles(e.target.files)}/>
+        <div className="asset-grid">{assets.map(a=><div key={a.id} className={`asset ${selected===a.id?'chosen':''}`} onClick={()=>setSelected(a.id)}>
+          <div className="asset-thumb">{a.type==='video'?<Video/>:a.type==='audio'?<Music2/>:<ImageIcon/>}<button className="asset-remove" onClick={e=>{e.stopPropagation();removeAsset(a.id)}}><X size={12}/></button></div>
+          <span title={a.name}>{a.name}</span><button className="small-btn" style={{marginTop:5,width:'100%',justifyContent:'center'}} onClick={e=>{e.stopPropagation();addToTimeline(a)}}><Plus size={12}/> للتايم لاين</button>
+        </div>)}</div>
+        {assets.length===0&&<div className="empty-hint">استورد ملفاتك ثم اضغط «للتايم لاين» لبدء المونتاج</div>}
+        </>}
+      </section>
+      <main className="center">
+        <div className="preview panel">
+          <div className="preview-head"><span>المعاينة</span><span className="muted">مشغل الفيديو <ChevronDown size={13}/></span></div>
+          <div className="preview-stage">
+            {isVideo?<video key={activeAsset.id} ref={videoRef} src={previewSource} onLoadedMetadata={onMeta} onTimeUpdate={e=>setCurrent(e.currentTarget.currentTime)} onEnded={()=>setPlaying(false)} />:
+             activeAsset?.type==='image'?<img src={previewSource}/>:<div className="preview-placeholder"><Film size={52}/><b>{activeAsset?.type==='audio'?'ملف صوتي محدد':'ابدأ باستيراد فيديو أو صورة'}</b><span>معاينة مشروع NOVA STUDIO AI</span></div>}
+            {textOverlay&&<div style={{position:'absolute',bottom:'18%',left:0,right:0,textAlign:'center',fontSize:28,fontWeight:800,color:'white',textShadow:'0 2px 8px #000'}}>{textOverlay}</div>}
+          </div>
           <div className="player-controls"><span className="timecode">{fmt(current)} <i>/</i> {fmt(duration)}</span><div className="transport"><button onClick={()=>seek(0)}><SkipBack size={17}/></button><button className="play" onClick={togglePlay}>{playing?<Pause size={18}/>:<Play size={18}/>}</button><button onClick={()=>seek(duration)}><SkipForward size={17}/></button></div><span className="ratio">16:9</span></div>
         </div>
         <div className="timeline panel">
