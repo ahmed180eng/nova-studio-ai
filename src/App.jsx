@@ -118,7 +118,7 @@ export default function App() {
   const previewSource=activeAsset?.url
   return <div className="app">
     <header className="topbar">
-      <div className="brand"><div className="brand-mark"><Film size={22}/></div><span>NOVA <b>STUDIO</b></span><small>AI</small></div>
+      <div className="brand"><div className="brand-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 30V10l22 20V10" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/><path d="M24 15l8 5-8 5z" fill="#07151a"/></svg></div><span>NOVA</span></div>
       <div className="project-name">مشروع بدون عنوان <ChevronDown size={14}/></div>
       <div className="top-actions"><button className="icon-btn" title="تراجع"><Undo2/></button><button className="icon-btn" title="إعادة"><Redo2/></button><span className="divider-v"/><button className="icon-btn"><HelpCircle/></button><button className="icon-btn"><Settings/></button><button className="export" onClick={()=>alert('التصدير النهائي لكل المسارات قيد التطوير. تقدر حالياً تستورد وتقُص وتقسم وترتب المقاطع داخل التايم لاين.') }><Download size={17}/> تصدير</button></div>
     </header>
@@ -171,7 +171,7 @@ export default function App() {
           <div className="preview-head"><span>المعاينة</span><span className="muted">مشغل الفيديو <ChevronDown size={13}/></span></div>
           <div className="preview-stage">
             {isVideo?<video key={activeAsset.id} ref={videoRef} src={previewSource} onLoadedMetadata={onMeta} onTimeUpdate={e=>setCurrent(e.currentTarget.currentTime)} onEnded={()=>setPlaying(false)} />:
-             activeAsset?.type==='image'?<img src={previewSource}/>:<div className="preview-placeholder"><Film size={52}/><b>{activeAsset?.type==='audio'?'ملف صوتي محدد':'ابدأ باستيراد فيديو أو صورة'}</b><span>معاينة مشروع NOVA STUDIO AI</span></div>}
+             activeAsset?.type==='image'?<img src={previewSource}/>:<div className="preview-placeholder"><Film size={52}/><b>{activeAsset?.type==='audio'?'ملف صوتي محدد':'ابدأ باستيراد فيديو أو صورة'}</b><span>معاينة مشروع NOVA</span></div>}
             {textOverlay&&<div style={{position:'absolute',bottom:'18%',left:0,right:0,textAlign:'center',fontSize:28,fontWeight:800,color:'white',textShadow:'0 2px 8px #000'}}>{textOverlay}</div>}
           </div>
           <div className="player-controls"><span className="timecode">{fmt(current)} <i>/</i> {fmt(duration)}</span><div className="transport"><button onClick={()=>seek(0)}><SkipBack size={17}/></button><button className="play" onClick={togglePlay}>{playing?<Pause size={18}/>:<Play size={18}/>}</button><button onClick={()=>seek(duration)}><SkipForward size={17}/></button></div><span className="ratio">16:9</span></div>
@@ -197,6 +197,6 @@ export default function App() {
         <div className="secure-note">التصدير المتقدم والذكاء الاصطناعي المتصل سيتم إضافتهما في مراحل لاحقة.</div>
       </aside>
     </div>
-    <footer className="statusbar"><span><i className="status-dot"/> جاهز للعمل</span><span>NOVA STUDIO AI · محرر تجريبي</span><span>واجهة عربية · 16:9</span></footer>
+    <footer className="statusbar"><span><i className="status-dot"/> جاهز للعمل</span><span>NOVA · محرر فيديو</span><span>واجهة عربية · 16:9</span></footer>
   </div>
 }
