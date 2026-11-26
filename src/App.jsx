@@ -124,7 +124,7 @@ export default function App() {
     </header>
     <div className="workspace">
       <aside className="sidebar">{nav.map(([Icon,label])=><button key={label} className={`nav-item ${activeTool===label?'active':''}`} onClick={()=>setActiveTool(label)}><Icon size={21}/><span>{label}</span></button>)}</aside>
-      <section className="media-panel panel">
+      <section className={`media-panel panel ${activeTool==='مولّد AI' ? 'ai-generator-panel' : ''}`}>
         <div className="panel-tabs"><button className={`tab ${activeTool!=='مولّد AI'?'active':''}`} onClick={()=>setActiveTool('الوسائط')}>المشروع</button><button className="tab" onClick={()=>setActiveTool('المكتبة')}>المكتبة</button><button className={`tab ${activeTool==='مولّد AI'?'active':''}`} onClick={()=>setActiveTool('مولّد AI')}>مولّد AI</button></div>
         {activeTool==='مولّد AI'?<div className="video-generator">
           <div className="generator-title"><WandSparkles size={20}/><div><b>إنشاء فيديو بالذكاء الاصطناعي</b><span>اكتب وصف المشهد وحدد شكل الفيديو</span></div></div>
