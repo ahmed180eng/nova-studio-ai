@@ -70,3 +70,15 @@
   .preview{height:52vh}
   .asset-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
+
+
+.generator-connection{display:flex;flex-direction:column;gap:7px;padding:10px;background:#12151d;border:1px solid #343744;border-radius:8px}
+.generator-connection>b{font-size:11px;color:#8de8f1}
+.generator-connection label{font-size:9px;color:#bfc5d1}
+.generator-connection input{width:100%;min-width:0;background:#0c0e14;border:1px solid #343744;border-radius:6px;padding:9px;color:#f2f3f7;font:10px 'Cairo',sans-serif;direction:ltr;text-align:left;outline:none}
+.generator-connection input:focus{border-color:#45cbdc}
+.generation-status{background:#1d2933;border:1px solid #35515e;color:#c9e9ee;padding:10px;border-radius:7px;font-size:10px;line-height:1.8;overflow-wrap:anywhere}
+.generated-result{display:flex;flex-direction:column;gap:8px;padding:10px;background:#111b22;border:1px solid #31515d;border-radius:8px}
+.generated-result>b{font-size:11px;color:#8de8f1}
+.generated-result video{width:100%;max-height:320px;border-radius:7px;background:#050608}
+.generated-result a{color:#8de8f1;font-size:10px;text-decoration:underline}
