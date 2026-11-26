@@ -113,7 +113,7 @@ export default function App() {
   const generateVideo=async()=>{
     if(!videoPrompt.trim())return
     const defaultBase=window.location.hostname.endsWith('vercel.app')?window.location.origin:''
-    const base=(apiBaseUrl.trim()||defaultBase).replace(/\\/+$/,'')
+    const base=(apiBaseUrl.trim()||defaultBase).replace(/\/+$/,'')
     if(!base){setGenerationMessage('أدخل رابط خادم NOVA المنشور على Vercel أولاً.');return}
     if(!apiAccessCode.trim()){setGenerationMessage('أدخل رمز الوصول الذي تم ضبطه في إعدادات خادم NOVA.');return}
     setIsGenerating(true);setGeneratedVideoUrl('');setGenerationMessage('جاري إرسال طلب إنشاء الفيديو...')
