@@ -24,6 +24,12 @@ export default function App() {
   const [duration,setDuration]=useState(0)
   const [current,setCurrent]=useState(0)
   const [chat,setChat]=useState('')
+  const [videoPrompt,setVideoPrompt]=useState('')
+  const [videoStyle,setVideoStyle]=useState('3D كرتون')
+  const [videoRatio,setVideoRatio]=useState('9:16')
+  const [videoDuration,setVideoDuration]=useState('5')
+  const [videoScenes,setVideoScenes]=useState('مشهد واحد')
+  const [preparedPrompt,setPreparedPrompt]=useState('')
   const [textOverlay,setTextOverlay]=useState('')
   const [overlayInput,setOverlayInput]=useState('')
   const [activeTool,setActiveTool]=useState('الوسائط')
@@ -94,6 +100,15 @@ export default function App() {
     setClips(prev=>prev.filter(c=>c.assetId!==id))
     if(selected===id||selectedClip?.assetId===id)setSelected(null)
   }
+  const prepareVideoPrompt=()=>{
+    if(!videoPrompt.trim())return
+    const result=`أنشئ فيديو ${videoStyle} بجودة سينمائية.\nالوصف: ${videoPrompt.trim()}\nالمدة: ${videoDuration} ثوانٍ.\nالأبعاد: ${videoRatio}.\nتقسيم المشاهد: ${videoScenes}.\nحافظ على ثبات شكل الشخصيات والألوان والإضاءة بين اللقطات، مع حركة طبيعية للكاميرا والشخصيات، وتفاصيل واضحة ومناسبة للنشر.`
+    setPreparedPrompt(result)
+  }
+  const copyPreparedPrompt=async()=>{
+    if(!preparedPrompt)return
+    try{await navigator.clipboard.writeText(preparedPrompt);alert('تم نسخ البرومبت.')}catch{alert('تعذر النسخ تلقائياً؛ يمكنك تحديد النص ونسخه.')}
+  }
   const sendChat=()=>{
     if(!chat.trim())return
     setChat('')
@@ -110,7 +125,23 @@ export default function App() {
     <div className="workspace">
       <aside className="sidebar">{nav.map(([Icon,label])=><button key={label} className={`nav-item ${activeTool===label?'active':''}`} onClick={()=>setActiveTool(label)}><Icon size={21}/><span>{label}</span></button>)}</aside>
       <section className="media-panel panel">
-        <div className="panel-tabs"><button className="tab active">المشروع</button><button className="tab">المكتبة</button><button className="tab">مولّد AI</button></div>
+        <div className="panel-tabs"><button className={`tab ${activeTool!=='مولّد AI'?'active':''}`} onClick={()=>setActiveTool('الوسائط')}>المشروع</button><button className="tab" onClick={()=>setActiveTool('المكتبة')}>المكتبة</button><button className={`tab ${activeTool==='مولّد AI'?'active':''}`} onClick={()=>setActiveTool('مولّد AI')}>مولّد AI</button></div>
+        {activeTool==='مولّد AI'?<div className="video-generator">
+          <div className="generator-title"><WandSparkles size={20}/><div><b>إنشاء فيديو بالذكاء الاصطناعي</b><span>اكتب وصف المشهد وحدد شكل الفيديو</span></div></div>
+          <label>وصف الفيديو (Prompt)</label>
+          <textarea className="generator-prompt" value={videoPrompt} onChange={e=>setVideoPrompt(e.target.value)} placeholder="مثال: أرنب صغير يجري في غابة سحرية، والكاميرا تتبعه بين الأشجار..."/>
+          <label>ستايل الفيديو</label>
+          <div className="generator-options">{['3D كرتون','أنمي','واقعي سينمائي','رسوم 2D'].map(s=><button key={s} className={videoStyle===s?'chosen':''} onClick={()=>setVideoStyle(s)}>{s}</button>)}</div>
+          <div className="generator-fields">
+            <div><label>المقاس</label><select value={videoRatio} onChange={e=>setVideoRatio(e.target.value)}><option>9:16</option><option>16:9</option><option>1:1</option></select></div>
+            <div><label>المدة</label><select value={videoDuration} onChange={e=>setVideoDuration(e.target.value)}><option value="5">5 ثوانٍ</option><option value="10">10 ثوانٍ</option><option value="15">15 ثانية</option></select></div>
+          </div>
+          <label>تكوين المشاهد</label>
+          <select value={videoScenes} onChange={e=>setVideoScenes(e.target.value)}><option>مشهد واحد</option><option>عدة لقطات متتابعة</option></select>
+          <button className="prepare-prompt" onClick={prepareVideoPrompt} disabled={!videoPrompt.trim()}><Sparkles size={16}/> تجهيز البرومبت</button>
+          {preparedPrompt&&<div className="prepared-prompt"><b>البرومبت الجاهز</b><p>{preparedPrompt}</p><button onClick={copyPreparedPrompt}><Download size={14}/> نسخ البرومبت</button></div>}
+          <div className="generator-notice"><b>إنشاء الفيديو الفعلي</b><span>واجهة تجهيز البرومبت جاهزة. التوليد المباشر يحتاج ربط خادم آمن بخدمة الفيديو وحفظ مفتاح API عليه؛ لن نضع المفتاح داخل التطبيق.</span></div>
+        </div>:<>
         <div className="media-heading"><b>{activeTool}</b><button className="small-btn" onClick={()=>fileRef.current?.click()}><Plus size={15}/> استيراد</button></div>
         <button className="import-box" onClick={()=>fileRef.current?.click()}><Upload size={24}/><b>استيراد الوسائط</b><span>فيديوهات، صور، وملفات صوت</span></button>
         <input ref={fileRef} type="file" multiple accept="video/*,audio/*,image/*" hidden onChange={e=>addFiles(e.target.files)}/>
@@ -119,6 +150,7 @@ export default function App() {
           <span title={a.name}>{a.name}</span><button className="small-btn" style={{marginTop:5,width:'100%',justifyContent:'center'}} onClick={e=>{e.stopPropagation();addToTimeline(a)}}><Plus size={12}/> للتايم لاين</button>
         </div>)}</div>
         {assets.length===0&&<div className="empty-hint">استورد ملفاتك ثم اضغط «للتايم لاين» لبدء المونتاج</div>}
+        </>}
       </section>
       <main className="center">
         <div className="preview panel">
