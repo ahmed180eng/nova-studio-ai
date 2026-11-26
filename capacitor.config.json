@@ -1,6 +1,6 @@
 {
   "appId": "com.novastudio.ai",
-  "appName": "NOVA Studio AI",
+  "appName": "NOVA",
   "webDir": "dist",
   "bundledWebRuntime": false
 }
