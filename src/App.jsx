@@ -30,6 +30,11 @@ export default function App() {
   const [videoDuration,setVideoDuration]=useState('5')
   const [videoScenes,setVideoScenes]=useState('مشهد واحد')
   const [preparedPrompt,setPreparedPrompt]=useState('')
+  const [apiBaseUrl,setApiBaseUrl]=useState(()=>localStorage.getItem('novaApiBaseUrl')||'')
+  const [apiAccessCode,setApiAccessCode]=useState(()=>localStorage.getItem('novaAccessCode')||'')
+  const [isGenerating,setIsGenerating]=useState(false)
+  const [generationMessage,setGenerationMessage]=useState('')
+  const [generatedVideoUrl,setGeneratedVideoUrl]=useState('')
   const [textOverlay,setTextOverlay]=useState('')
   const [overlayInput,setOverlayInput]=useState('')
   const [activeTool,setActiveTool]=useState('الوسائط')
@@ -105,6 +110,32 @@ export default function App() {
     const result=`أنشئ فيديو ${videoStyle} بجودة سينمائية.\nالوصف: ${videoPrompt.trim()}\nالمدة: ${videoDuration} ثوانٍ.\nالأبعاد: ${videoRatio}.\nتقسيم المشاهد: ${videoScenes}.\nحافظ على ثبات شكل الشخصيات والألوان والإضاءة بين اللقطات، مع حركة طبيعية للكاميرا والشخصيات، وتفاصيل واضحة ومناسبة للنشر.`
     setPreparedPrompt(result)
   }
+  const generateVideo=async()=>{
+    if(!videoPrompt.trim())return
+    const defaultBase=window.location.hostname.endsWith('vercel.app')?window.location.origin:''
+    const base=(apiBaseUrl.trim()||defaultBase).replace(/\\/+$/,'')
+    if(!base){setGenerationMessage('أدخل رابط خادم NOVA المنشور على Vercel أولاً.');return}
+    if(!apiAccessCode.trim()){setGenerationMessage('أدخل رمز الوصول الذي تم ضبطه في إعدادات خادم NOVA.');return}
+    setIsGenerating(true);setGeneratedVideoUrl('');setGenerationMessage('جاري إرسال طلب إنشاء الفيديو...')
+    try{
+      const started=await fetch(base+'/api/generate',{method:'POST',headers:{'Content-Type':'application/json','x-nova-access-code':apiAccessCode.trim()},body:JSON.stringify({prompt:videoPrompt,style:videoStyle,ratio:videoRatio,duration:Number(videoDuration),scenes:videoScenes})})
+      const startData=await started.json().catch(()=>({}))
+      if(!started.ok)throw new Error(startData.error||'تعذر بدء التوليد.')
+      if(!startData.taskId)throw new Error('لم يصل رقم مهمة التوليد من الخدمة.')
+      setGenerationMessage('تم إرسال الطلب. جاري إنشاء الفيديو، قد يستغرق عدة دقائق...')
+      for(let attempt=0;attempt<90;attempt++){
+        await new Promise(resolve=>setTimeout(resolve,5000))
+        const response=await fetch(base+'/api/tasks/'+encodeURIComponent(startData.taskId),{headers:{'x-nova-access-code':apiAccessCode.trim()}})
+        const task=await response.json().catch(()=>({}))
+        if(!response.ok)throw new Error(task.error||'تعذر متابعة حالة الفيديو.')
+        if(task.status==='SUCCEEDED'&&task.videoUrl){setGeneratedVideoUrl(task.videoUrl);setGenerationMessage('اكتمل الفيديو بنجاح!');return}
+        if(task.status==='FAILED'||task.status==='CANCELED')throw new Error(task.failure||'لم يكتمل إنشاء الفيديو. جرب وصفاً آخر.')
+        setGenerationMessage('جاري التوليد... الحالة: '+(task.status||'قيد الانتظار'))
+      }
+      setGenerationMessage('الفيديو ما زال قيد المعالجة. احتفظ بالتطبيق مفتوحاً ثم حاول متابعة المهمة لاحقاً.')
+    }catch(error){setGenerationMessage(error.message||'حدث خطأ أثناء إنشاء الفيديو.')}
+    finally{setIsGenerating(false)}
+  }
   const copyPreparedPrompt=async()=>{
     if(!preparedPrompt)return
     try{await navigator.clipboard.writeText(preparedPrompt);alert('تم نسخ البرومبت.')}catch{alert('تعذر النسخ تلقائياً؛ يمكنك تحديد النص ونسخه.')}
@@ -133,14 +164,24 @@ export default function App() {
           <label>ستايل الفيديو</label>
           <div className="generator-options">{['3D كرتون','أنمي','واقعي سينمائي','رسوم 2D'].map(s=><button key={s} className={videoStyle===s?'chosen':''} onClick={()=>setVideoStyle(s)}>{s}</button>)}</div>
           <div className="generator-fields">
-            <div><label>المقاس</label><select value={videoRatio} onChange={e=>setVideoRatio(e.target.value)}><option>9:16</option><option>16:9</option><option>1:1</option></select></div>
+            <div><label>المقاس</label><select value={videoRatio} onChange={e=>setVideoRatio(e.target.value)}><option>9:16</option><option>16:9</option></select></div>
             <div><label>المدة</label><select value={videoDuration} onChange={e=>setVideoDuration(e.target.value)}><option value="5">5 ثوانٍ</option><option value="10">10 ثوانٍ</option><option value="15">15 ثانية</option></select></div>
           </div>
           <label>تكوين المشاهد</label>
           <select value={videoScenes} onChange={e=>setVideoScenes(e.target.value)}><option>مشهد واحد</option><option>عدة لقطات متتابعة</option></select>
           <button className="prepare-prompt" onClick={prepareVideoPrompt} disabled={!videoPrompt.trim()}><Sparkles size={16}/> تجهيز البرومبت</button>
           {preparedPrompt&&<div className="prepared-prompt"><b>البرومبت الجاهز</b><p>{preparedPrompt}</p><button onClick={copyPreparedPrompt}><Download size={14}/> نسخ البرومبت</button></div>}
-          <div className="generator-notice"><b>إنشاء الفيديو الفعلي</b><span>واجهة تجهيز البرومبت جاهزة. التوليد المباشر يحتاج ربط خادم آمن بخدمة الفيديو وحفظ مفتاح API عليه؛ لن نضع المفتاح داخل التطبيق.</span></div>
+          <div className="generator-connection">
+            <b>إعداد الاتصال بخادم NOVA</b>
+            <label>رابط الخادم المنشور على Vercel</label>
+            <input value={apiBaseUrl} onChange={e=>{setApiBaseUrl(e.target.value);localStorage.setItem('novaApiBaseUrl',e.target.value)}} placeholder="https://اسم-مشروعك.vercel.app"/>
+            <label>رمز الوصول للتطبيق</label>
+            <input type="password" value={apiAccessCode} onChange={e=>{setApiAccessCode(e.target.value);localStorage.setItem('novaAccessCode',e.target.value)}} placeholder="رمز الوصول الذي تضبطه على Vercel"/>
+          </div>
+          <button className="prepare-prompt" onClick={generateVideo} disabled={!videoPrompt.trim()||isGenerating}>{isGenerating?'جاري إنشاء الفيديو...':'إنشاء الفيديو الآن'}</button>
+          {generationMessage&&<div className="generation-status" role="status">{generationMessage}</div>}
+          {generatedVideoUrl&&<div className="generated-result"><b>الفيديو الناتج</b><video src={generatedVideoUrl} controls playsInline/><a href={generatedVideoUrl} target="_blank" rel="noreferrer">فتح / حفظ الفيديو</a></div>}
+          <div className="generator-notice"><b>التكلفة التقريبية</b><span>نستخدم مبدئياً نمطاً اقتصادياً بتكلفة 2 رصيد لكل ثانية؛ فيديو 5 ثوانٍ يقدّر بنحو 10 أرصدة (0.10 دولار)، وقد تختلف الضرائب أو إعدادات النموذج.</span></div>
         </div>:<>
         <div className="media-heading"><b>{activeTool}</b><button className="small-btn" onClick={()=>fileRef.current?.click()}><Plus size={15}/> استيراد</button></div>
         <button className="import-box" onClick={()=>fileRef.current?.click()}><Upload size={24}/><b>استيراد الوسائط</b><span>فيديوهات، صور، وملفات صوت</span></button>
