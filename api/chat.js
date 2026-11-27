@@ -1,7 +1,24 @@
 // Vercel serverless endpoint. Keep OPENAI_API_KEY in project environment variables.
 export default async function handler(req, res) {
+  const origin = req.headers.origin
+  const allowedOrigins = new Set([
+    'http://localhost',
+    'https://localhost',
+    'capacitor://localhost',
+    process.env.APP_ORIGIN
+  ].filter(Boolean))
+  const requestHost = req.headers.host
+  const sameOrigin = origin && requestHost && new URL(origin).host === requestHost
+  if (origin && (allowedOrigins.has(origin) || sameOrigin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Vary', 'Origin')
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+  if (req.method === 'OPTIONS') return res.status(204).end()
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST')
+    res.setHeader('Allow', 'POST, OPTIONS')
     return res.status(405).json({ error: 'الطريقة غير مدعومة.' })
   }
 
