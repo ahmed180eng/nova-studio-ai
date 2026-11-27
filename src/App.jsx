@@ -116,7 +116,9 @@ export default function App() {
     try{await navigator.clipboard.writeText(preparedPrompt);alert('تم نسخ البرومبت.')}catch{alert('تعذر النسخ تلقائياً؛ يمكنك تحديد النص ونسخه.')}
   }
   const exportTimeline=async()=>{
-    const visualClips=clips.map(clip=>({...clip,asset:assets.find(a=>a.id===clip.assetId)})).filter(x=>x.asset&&['image','video'].includes(x.asset.type))
+    const resolvedClips=clips.map(clip=>({...clip,asset:assets.find(a=>a.id===clip.assetId)})).filter(x=>x.asset)
+    const visualClips=resolvedClips.filter(x=>['image','video'].includes(x.asset.type))
+    const audioClips=resolvedClips.filter(x=>x.asset.type==='audio')
     if(!visualClips.length){alert('أضف صوراً أو فيديوهات إلى التايم لاين أولاً.');return}
     if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){alert('تصدير الفيديو غير مدعوم في هذا المتصفح. افتح NOVA من Chrome على أندرويد.');return}
     setExporting(true)
@@ -125,7 +127,10 @@ export default function App() {
       const portrait=videoRatio==='9:16'
       const canvas=document.createElement('canvas');canvas.width=portrait?720:1280;canvas.height=portrait?1280:720
       const ctx=canvas.getContext('2d'),stream=canvas.captureStream(30),chunks=[]
-      if(visualClips.some(x=>x.asset.type==='video')&&window.AudioContext){audioContext=new AudioContext();audioDestination=audioContext.createMediaStreamDestination();stream.addTrack(audioDestination.stream.getAudioTracks()[0]);await audioContext.resume()}
+      const AudioContextClass=window.AudioContext||window.webkitAudioContext
+      if((visualClips.some(x=>x.asset.type==='video')||audioClips.length)&&AudioContextClass){audioContext=new AudioContextClass();audioDestination=audioContext.createMediaStreamDestination();stream.addTrack(audioDestination.stream.getAudioTracks()[0]);await audioContext.resume()}
+      let scheduledAudioDuration=0
+      if(audioContext&&audioClips.length){let audioCursor=audioContext.currentTime+.25;for(const item of audioClips){const bytes=await item.asset.file.arrayBuffer();const buffer=await audioContext.decodeAudioData(bytes);const offset=Math.min(item.in,buffer.duration);const end=Math.min(item.out,buffer.duration);const seconds=Math.max(0,end-offset);if(seconds>0){const source=audioContext.createBufferSource();source.buffer=buffer;source.connect(audioDestination);source.start(audioCursor,offset,seconds);audioCursor+=seconds;scheduledAudioDuration+=seconds}}}
       const mimeType=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(type=>MediaRecorder.isTypeSupported(type))
       if(!mimeType)throw new Error('المتصفح لا يدعم صيغة تصدير الفيديو المتاحة.')
       recorder=new MediaRecorder(stream,{mimeType});recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)}
@@ -137,9 +142,10 @@ export default function App() {
         if(asset.type==='image'){const img=new Image();img.src=asset.url;await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('تعذر فتح الصورة: '+asset.name))});const start=performance.now(),seconds=Math.max(.2,item.out-item.in);while((performance.now()-start)/1000<seconds){drawCover(img);await new Promise(r=>requestAnimationFrame(r))}}
         else{const video=document.createElement('video');video.src=asset.url;video.muted=false;video.volume=1;video.playsInline=true;video.preload='auto';await new Promise((resolve,reject)=>{video.onloadedmetadata=resolve;video.onerror=()=>reject(new Error('تعذر فتح الفيديو: '+asset.name))});if(audioContext&&audioDestination){const source=audioContext.createMediaElementSource(video);source.connect(audioDestination)}video.currentTime=Math.min(item.in,Math.max(0,video.duration-.05));await new Promise(resolve=>{video.onseeked=resolve;setTimeout(resolve,1200)});const end=Math.min(item.out,video.duration);await video.play();while(video.currentTime<end&&!video.ended){drawCover(video);await new Promise(r=>requestAnimationFrame(r))}video.pause()}
       }
+      if(scheduledAudioDuration>0){const visualSeconds=visualClips.reduce((sum,item)=>sum+Math.max(.2,item.out-item.in),0);const remaining=scheduledAudioDuration-visualSeconds;if(remaining>0)await new Promise(resolve=>setTimeout(resolve,remaining*1000))}
       recorder.stop();await finished
       const blob=new Blob(chunks,{type:mimeType}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='NOVA-video.webm';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)
-      alert('تم تصدير الفيديو. الملف بصيغة WebM. يتضمن صوت الفيديو الأصلي عند دعم المتصفح؛ ملفات الصوت المنفصلة على مسار الصوت لم تُدمج بعد.')
+      alert('تم تصدير الفيديو. الملف بصيغة WebM. يتضمن صوت الفيديو الأصلي وملفات الصوت المنفصلة (تُشغّل بالتتابع من بداية الفيديو).')
     }catch(error){if(recorder&&recorder.state!=='inactive')recorder.stop();alert(error.message||'تعذر تصدير الفيديو.')}finally{if(audioContext){await audioContext.close().catch(()=>{})}setExporting(false)}
   }
   const sendChat=async()=>{
