@@ -1,0 +1,22 @@
+{
+  "id": "./",
+  "name": "NOVA - محرر الفيديو",
+  "short_name": "NOVA",
+  "description": "محرر فيديو عربي لإنشاء وتحرير المقاطع",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d0e13",
+  "theme_color": "#0d0e13",
+  "icons": [
+    {
+      "src": "./nova-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
