@@ -128,7 +128,7 @@ export default function App() {
       const canvas=document.createElement('canvas');canvas.width=portrait?720:1280;canvas.height=portrait?1280:720
       const ctx=canvas.getContext('2d'),stream=canvas.captureStream(30),chunks=[]
       const AudioContextClass=window.AudioContext||window.webkitAudioContext
-      if((visualClips.some(x=>x.asset.type==='video')||audioClips.length)&&AudioContextClass){audioContext=new AudioContextClass();audioDestination=audioContext.createMediaStreamDestination();stream.addTrack(audioDestination.stream.getAudioTracks()[0]);await audioContext.resume()}
+      if((visualClips.length>1||visualClips.some(x=>x.asset.type==='video')||audioClips.length)&&AudioContextClass){audioContext=new AudioContextClass();audioDestination=audioContext.createMediaStreamDestination();stream.addTrack(audioDestination.stream.getAudioTracks()[0]);await audioContext.resume()}
       let scheduledAudioDuration=0
       if(audioContext&&audioClips.length){let audioCursor=audioContext.currentTime+.25;for(const item of audioClips){const bytes=await item.asset.file.arrayBuffer();const buffer=await audioContext.decodeAudioData(bytes);const offset=Math.min(item.in,buffer.duration);const end=Math.min(item.out,buffer.duration);const seconds=Math.max(0,end-offset);if(seconds>0){const source=audioContext.createBufferSource();source.buffer=buffer;source.connect(audioDestination);source.start(audioCursor,offset,seconds);audioCursor+=seconds;scheduledAudioDuration+=seconds}}}
       const mimeType=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(type=>MediaRecorder.isTypeSupported(type))
@@ -148,7 +148,7 @@ export default function App() {
       const transitionToBlack=async()=>{
         const start=performance.now(),duration=360
         playWhoosh()
-        while(performance.now()-start<duration){const progress=Math.min(1,(performance.now()-start)/duration);ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=progress;ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=1;await new Promise(r=>requestAnimationFrame(r))}
+        while(performance.now()-start<duration){const progress=Math.min(1,(performance.now()-start)/duration);ctx.globalAlpha=progress;ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=1;await new Promise(r=>requestAnimationFrame(r))}
       }
       for(let clipIndex=0;clipIndex<visualClips.length;clipIndex++){
         const item=visualClips[clipIndex],asset=item.asset
