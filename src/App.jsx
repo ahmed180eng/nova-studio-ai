@@ -38,6 +38,9 @@ export default function App() {
   const [zoom,setZoom]=useState(1)
   const [volume,setVolume]=useState(1)
   const [exporting,setExporting]=useState(false)
+  const [transitionStyle,setTransitionStyle]=useState('fade')
+  const [transitionSound,setTransitionSound]=useState('whoosh')
+  const [backgroundTone,setBackgroundTone]=useState('cinematic')
   const videoRef=useRef(null)
   const audioRef=useRef(null)
   const fileRef=useRef(null)
@@ -128,7 +131,7 @@ export default function App() {
       const canvas=document.createElement('canvas');canvas.width=portrait?720:1280;canvas.height=portrait?1280:720
       const ctx=canvas.getContext('2d'),stream=canvas.captureStream(30),chunks=[]
       const AudioContextClass=window.AudioContext||window.webkitAudioContext
-      if((visualClips.length>1||visualClips.some(x=>x.asset.type==='video')||audioClips.length)&&AudioContextClass){audioContext=new AudioContextClass();audioDestination=audioContext.createMediaStreamDestination();stream.addTrack(audioDestination.stream.getAudioTracks()[0]);await audioContext.resume()}
+      if((backgroundTone!=='off'||visualClips.length>1||visualClips.some(x=>x.asset.type==='video')||audioClips.length)&&AudioContextClass){audioContext=new AudioContextClass();audioDestination=audioContext.createMediaStreamDestination();stream.addTrack(audioDestination.stream.getAudioTracks()[0]);await audioContext.resume()}
       let scheduledAudioDuration=0
       if(audioContext&&audioClips.length){let audioCursor=audioContext.currentTime+.25;for(const item of audioClips){const bytes=await item.asset.file.arrayBuffer();const buffer=await audioContext.decodeAudioData(bytes);const offset=Math.min(item.in,buffer.duration);const end=Math.min(item.out,buffer.duration);const seconds=Math.max(0,end-offset);if(seconds>0){const source=audioContext.createBufferSource();source.buffer=buffer;source.connect(audioDestination);source.start(audioCursor,offset,seconds);audioCursor+=seconds;scheduledAudioDuration+=seconds}}}
       const mimeType=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(type=>MediaRecorder.isTypeSupported(type))
@@ -137,29 +140,55 @@ export default function App() {
       const finished=new Promise((resolve,reject)=>{recorder.onstop=resolve;recorder.onerror=()=>reject(new Error('حدث خطأ أثناء تسجيل الفيديو.'))})
       recorder.start(250)
       const drawCover=source=>{const sw=source.videoWidth||source.naturalWidth||canvas.width,sh=source.videoHeight||source.naturalHeight||canvas.height,scale=Math.max(canvas.width/sw,canvas.height/sh),w=sw*scale,h=sh*scale;ctx.fillStyle='#05080b';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(source,(canvas.width-w)/2,(canvas.height-h)/2,w,h);if(textOverlay){ctx.direction='rtl';ctx.textAlign='center';ctx.font='bold 42px Cairo, sans-serif';ctx.lineWidth=5;ctx.strokeStyle='#000';ctx.strokeText(textOverlay,canvas.width/2,canvas.height*.86,canvas.width*.9);ctx.fillStyle='#fff';ctx.fillText(textOverlay,canvas.width/2,canvas.height*.86,canvas.width*.9)}}
-      const playWhoosh=()=>{
-        if(!audioContext||!audioDestination)return
-        const duration=.38,length=Math.floor(audioContext.sampleRate*duration),buffer=audioContext.createBuffer(1,length,audioContext.sampleRate),data=buffer.getChannelData(0)
-        for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*(1-i/length)
-        const source=audioContext.createBufferSource(),filter=audioContext.createBiquadFilter(),gain=audioContext.createGain()
-        source.buffer=buffer;filter.type='highpass';filter.frequency.value=650;gain.gain.setValueAtTime(.0001,audioContext.currentTime);gain.gain.exponentialRampToValueAtTime(.16,audioContext.currentTime+.06);gain.gain.exponentialRampToValueAtTime(.0001,audioContext.currentTime+duration)
-        source.connect(filter);filter.connect(gain);gain.connect(audioDestination);source.start();source.stop(audioContext.currentTime+duration)
+      const playTransitionSound=()=>{
+        if(!audioContext||!audioDestination||transitionSound==='off')return
+        const now=audioContext.currentTime
+        if(transitionSound==='whoosh'){
+          const duration=.42,length=Math.floor(audioContext.sampleRate*duration),buffer=audioContext.createBuffer(1,length,audioContext.sampleRate),data=buffer.getChannelData(0)
+          for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*(1-i/length)
+          const source=audioContext.createBufferSource(),filter=audioContext.createBiquadFilter(),gain=audioContext.createGain()
+          source.buffer=buffer;filter.type='highpass';filter.frequency.value=600;gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.13,now+.06);gain.gain.exponentialRampToValueAtTime(.0001,now+duration);source.connect(filter);filter.connect(gain);gain.connect(audioDestination);source.start();source.stop(now+duration)
+        }else{
+          const osc=audioContext.createOscillator(),gain=audioContext.createGain()
+          osc.type='sine';osc.frequency.setValueAtTime(transitionSound==='chime'?880:160,now);if(transitionSound==='chime')osc.frequency.exponentialRampToValueAtTime(1320,now+.22)
+          gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(transitionSound==='chime'?.09:.14,now+.025);gain.gain.exponentialRampToValueAtTime(.0001,now+(transitionSound==='chime'?.55:.18));osc.connect(gain);gain.connect(audioDestination);osc.start();osc.stop(now+(transitionSound==='chime'?.58:.2))
+        }
       }
-      const transitionToBlack=async()=>{
-        const start=performance.now(),duration=360
-        playWhoosh()
-        while(performance.now()-start<duration){const progress=Math.min(1,(performance.now()-start)/duration);ctx.globalAlpha=progress;ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=1;await new Promise(r=>requestAnimationFrame(r))}
+      const transitionBetweenScenes=async()=>{
+        const duration=transitionStyle==='flash'?260:420,start=performance.now()
+        playTransitionSound()
+        const frame=document.createElement('canvas');frame.width=canvas.width;frame.height=canvas.height;frame.getContext('2d').drawImage(canvas,0,0)
+        while(performance.now()-start<duration){
+          const p=Math.min(1,(performance.now()-start)/duration)
+          if(transitionStyle==='fade'){ctx.fillStyle='#000';ctx.globalAlpha=p;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=1}
+          else if(transitionStyle==='flash'){ctx.fillStyle='#fff';ctx.globalAlpha=Math.sin(p*Math.PI)*.92;ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=1}
+          else if(transitionStyle==='wipe'){ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width*p,canvas.height)}
+          else{ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=p;ctx.drawImage(frame,canvas.width*.05*p,canvas.height*.05*p,canvas.width*(1-.1*p),canvas.height*(1-.1*p));ctx.globalAlpha=1}
+          await new Promise(r=>requestAnimationFrame(r))
+        }
+      }
+      if(audioContext&&backgroundTone!=='off'){
+        const patterns={cinematic:[110,164.81,220,164.81],adventure:[146.83,196,246.94,196],calm:[130.81,164.81,196,164.81]}
+        const notes=patterns[backgroundTone]||patterns.cinematic
+        const master=audioContext.createGain();master.gain.value=.035;master.connect(audioDestination)
+        const startAt=audioContext.currentTime+.08
+        const bgLength=visualClips.reduce((sum,item)=>sum+Math.max(.2,item.out-item.in),0)+Math.max(0,visualClips.length-1)*.42
+        for(let t=0;t<bgLength;t+=1.6){
+          const osc=audioContext.createOscillator(),gain=audioContext.createGain(),note=notes[Math.floor(t/1.6)%notes.length]
+          osc.type='sine';osc.frequency.value=note;gain.gain.setValueAtTime(.0001,startAt+t);gain.gain.linearRampToValueAtTime(.045,startAt+t+.35);gain.gain.setTargetAtTime(.0001,startAt+t+1.25,.22)
+          osc.connect(gain);gain.connect(master);osc.start(startAt+t);osc.stop(startAt+t+1.6)
+        }
       }
       for(let clipIndex=0;clipIndex<visualClips.length;clipIndex++){
         const item=visualClips[clipIndex],asset=item.asset
         if(asset.type==='image'){const img=new Image();img.src=asset.url;await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('تعذر فتح الصورة: '+asset.name))});const start=performance.now(),seconds=Math.max(.2,item.out-item.in);while((performance.now()-start)/1000<seconds){drawCover(img);await new Promise(r=>requestAnimationFrame(r))}}
         else{const video=document.createElement('video');video.src=asset.url;video.muted=false;video.volume=1;video.playsInline=true;video.preload='auto';await new Promise((resolve,reject)=>{video.onloadedmetadata=resolve;video.onerror=()=>reject(new Error('تعذر فتح الفيديو: '+asset.name))});if(audioContext&&audioDestination){const source=audioContext.createMediaElementSource(video);source.connect(audioDestination)}video.currentTime=Math.min(item.in,Math.max(0,video.duration-.05));await new Promise(resolve=>{video.onseeked=resolve;setTimeout(resolve,1200)});const end=Math.min(item.out,video.duration);await video.play();while(video.currentTime<end&&!video.ended){drawCover(video);await new Promise(r=>requestAnimationFrame(r))}video.pause()}
-        if(clipIndex<visualClips.length-1)await transitionToBlack()
+        if(clipIndex<visualClips.length-1)await transitionBetweenScenes()
       }
       if(scheduledAudioDuration>0){const visualSeconds=visualClips.reduce((sum,item)=>sum+Math.max(.2,item.out-item.in),0);const remaining=scheduledAudioDuration-visualSeconds;if(remaining>0)await new Promise(resolve=>setTimeout(resolve,remaining*1000))}
       recorder.stop();await finished
       const blob=new Blob(chunks,{type:mimeType}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='NOVA-video.webm';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)
-      alert('تم تصدير الفيديو. الملف بصيغة WebM. يتضمن صوت الفيديو الأصلي وملفات الصوت المنفصلة (تُشغّل بالتتابع من بداية الفيديو).')
+      alert('تم تصدير الفيديو بصيغة WebM مع الانتقالات والمؤثرات الصوتية ونغمة الخلفية المختارة.')
     }catch(error){if(recorder&&recorder.state!=='inactive')recorder.stop();alert(error.message||'تعذر تصدير الفيديو.')}finally{if(audioContext){await audioContext.close().catch(()=>{})}setExporting(false)}
   }
   const sendChat=async()=>{
@@ -242,7 +271,7 @@ export default function App() {
           <div className="player-controls"><span className="timecode">{fmt(current)} <i>/</i> {fmt(duration)}</span><div className="transport"><button onClick={()=>seek(0)}><SkipBack size={17}/></button><button className="play" onClick={togglePlay}>{playing?<Pause size={18}/>:<Play size={18}/>}</button><button onClick={()=>seek(duration)}><SkipForward size={17}/></button></div><span className="ratio">16:9</span></div>
         </div>
         <div className="timeline panel">
-          <div className="timeline-toolbar"><div className="tool-group"><button title="تقسيم عند المؤشر" onClick={splitClip}><Scissors/></button><button title="حذف المقطع المحدد" onClick={deleteClip}><Trash2/></button><button title="إضافة ملف" onClick={()=>fileRef.current?.click()}><Plus/></button></div><div className="tool-group"><button onClick={()=>setZoom(z=>Math.max(.5,z-.1))}><Minus/></button><span className="zoom-label">{Math.round(zoom*100)}%</span><button onClick={()=>setZoom(z=>Math.min(2,z+.1))}><Plus/></button></div></div>
+          <div className="timeline-toolbar"><div className="tool-group"><button title="تقسيم عند المؤشر" onClick={splitClip}><Scissors/></button><button title="حذف المقطع المحدد" onClick={deleteClip}><Trash2/></button><button title="إضافة ملف" onClick={()=>fileRef.current?.click()}><Plus/></button></div><div className="tool-group" style={{gap:6,flexWrap:'wrap'}}><label style={{fontSize:10}}>الانتقال</label><select aria-label="نوع الانتقال" value={transitionStyle} onChange={e=>setTransitionStyle(e.target.value)}><option value="fade">تلاشي</option><option value="flash">وميض</option><option value="wipe">مسح جانبي</option><option value="zoom">تكبير سينمائي</option></select><label style={{fontSize:10}}>المؤثر</label><select aria-label="مؤثر الانتقال" value={transitionSound} onChange={e=>setTransitionSound(e.target.value)}><option value="whoosh">Whoosh</option><option value="chime">رنة</option><option value="impact">ضربة</option><option value="off">بدون</option></select><label style={{fontSize:10}}>موسيقى الخلفية</label><select aria-label="موسيقى الخلفية" value={backgroundTone} onChange={e=>setBackgroundTone(e.target.value)}><option value="cinematic">سينمائية</option><option value="adventure">مغامرة</option><option value="calm">هادئة</option><option value="off">بدون</option></select></div><div className="tool-group"><button onClick={()=>setZoom(z=>Math.max(.5,z-.1))}><Minus/></button><span className="zoom-label">{Math.round(zoom*100)}%</span><button onClick={()=>setZoom(z=>Math.min(2,z+.1))}><Plus/></button></div></div>
           <div className="ruler"><span>00:00</span><span>{fmt(totalDuration/4)}</span><span>{fmt(totalDuration/2)}</span><span>{fmt(totalDuration*.75)}</span><span>{fmt(totalDuration)}</span></div>
           <div className="tracks"><div className="track-label"><Film size={15}/> فيديو / صور</div><div className="track-content">
             {clips.filter(c=>['video','image'].includes(assets.find(a=>a.id===c.assetId)?.type)).map(c=>{const a=assets.find(x=>x.id===c.assetId);return <button key={c.id} className={`clip ${selected===c.id?'selected':''}`} style={{width:`${Math.max(80,(c.out-c.in)*28*zoom)}px`}} onClick={()=>{setSelected(c.id);seek(c.in)}}><Film size={14}/><span>{a?.name}</span></button>})}
