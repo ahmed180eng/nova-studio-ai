@@ -119,7 +119,8 @@ export default function App() {
     setChat('')
     setChatLoading(true)
     try{
-      const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,history:history.slice(-10)})})
+      const apiBase=(import.meta.env.VITE_API_BASE_URL||'').replace(/\/$/,'')
+      const response=await fetch(apiBase+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,history:history.slice(-10)})})
       const data=await response.json().catch(()=>({}))
       if(!response.ok)throw new Error(data.error||'حصلت مشكلة في الاتصال بالمساعد.')
       setChatMessages(prev=>[...prev,{role:'assistant',content:data.reply||'لم يصل رد من المساعد.'}])
