@@ -120,12 +120,12 @@ export default function App() {
     if(!visualClips.length){alert('أضف صوراً أو فيديوهات إلى التايم لاين أولاً.');return}
     if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){alert('تصدير الفيديو غير مدعوم في هذا المتصفح. افتح NOVA من Chrome على أندرويد.');return}
     setExporting(true)
-    let recorder,audioContext
+    let recorder,audioContext,audioDestination
     try{
       const portrait=videoRatio==='9:16'
       const canvas=document.createElement('canvas');canvas.width=portrait?720:1280;canvas.height=portrait?1280:720
       const ctx=canvas.getContext('2d'),stream=canvas.captureStream(30),chunks=[]
-      if(visualClips.some(x=>x.asset.type==='video')&&window.AudioContext){audioContext=new AudioContext();const audioOut=audioContext.createMediaStreamDestination();stream.addTrack(audioOut.stream.getAudioTracks()[0]);await audioContext.resume();window.__novaAudioOut=audioOut}
+      if(visualClips.some(x=>x.asset.type==='video')&&window.AudioContext){audioContext=new AudioContext();audioDestination=audioContext.createMediaStreamDestination();stream.addTrack(audioDestination.stream.getAudioTracks()[0]);await audioContext.resume()}
       const mimeType=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(type=>MediaRecorder.isTypeSupported(type))
       if(!mimeType)throw new Error('المتصفح لا يدعم صيغة تصدير الفيديو المتاحة.')
       recorder=new MediaRecorder(stream,{mimeType});recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)}
@@ -135,12 +135,12 @@ export default function App() {
       for(const item of visualClips){
         const asset=item.asset
         if(asset.type==='image'){const img=new Image();img.src=asset.url;await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('تعذر فتح الصورة: '+asset.name))});const start=performance.now(),seconds=Math.max(.2,item.out-item.in);while((performance.now()-start)/1000<seconds){drawCover(img);await new Promise(r=>requestAnimationFrame(r))}}
-        else{const video=document.createElement('video');video.src=asset.url;video.muted=false;video.volume=1;video.playsInline=true;video.preload='auto';await new Promise((resolve,reject)=>{video.onloadedmetadata=resolve;video.onerror=()=>reject(new Error('تعذر فتح الفيديو: '+asset.name))});if(audioContext&&window.__novaAudioOut){const source=audioContext.createMediaElementSource(video);source.connect(window.__novaAudioOut)}video.currentTime=Math.min(item.in,Math.max(0,video.duration-.05));await new Promise(resolve=>{video.onseeked=resolve;setTimeout(resolve,1200)});const end=Math.min(item.out,video.duration);await video.play();while(video.currentTime<end&&!video.ended){drawCover(video);await new Promise(r=>requestAnimationFrame(r))}video.pause()}
+        else{const video=document.createElement('video');video.src=asset.url;video.muted=false;video.volume=1;video.playsInline=true;video.preload='auto';await new Promise((resolve,reject)=>{video.onloadedmetadata=resolve;video.onerror=()=>reject(new Error('تعذر فتح الفيديو: '+asset.name))});if(audioContext&&audioDestination){const source=audioContext.createMediaElementSource(video);source.connect(audioDestination)}video.currentTime=Math.min(item.in,Math.max(0,video.duration-.05));await new Promise(resolve=>{video.onseeked=resolve;setTimeout(resolve,1200)});const end=Math.min(item.out,video.duration);await video.play();while(video.currentTime<end&&!video.ended){drawCover(video);await new Promise(r=>requestAnimationFrame(r))}video.pause()}
       }
       recorder.stop();await finished
       const blob=new Blob(chunks,{type:mimeType}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='NOVA-video.webm';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)
       alert('تم تصدير الفيديو. الملف بصيغة WebM. يتضمن صوت الفيديو الأصلي عند دعم المتصفح؛ ملفات الصوت المنفصلة على مسار الصوت لم تُدمج بعد.')
-    }catch(error){if(recorder&&recorder.state!=='inactive')recorder.stop();alert(error.message||'تعذر تصدير الفيديو.')}finally{if(audioContext){await audioContext.close().catch(()=>{});window.__novaAudioOut=null}setExporting(false)}
+    }catch(error){if(recorder&&recorder.state!=='inactive')recorder.stop();alert(error.message||'تعذر تصدير الفيديو.')}finally{if(audioContext){await audioContext.close().catch(()=>{})}setExporting(false)}
   }
   const sendChat=async()=>{
     const message=chat.trim()
