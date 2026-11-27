@@ -137,10 +137,24 @@ export default function App() {
       const finished=new Promise((resolve,reject)=>{recorder.onstop=resolve;recorder.onerror=()=>reject(new Error('حدث خطأ أثناء تسجيل الفيديو.'))})
       recorder.start(250)
       const drawCover=source=>{const sw=source.videoWidth||source.naturalWidth||canvas.width,sh=source.videoHeight||source.naturalHeight||canvas.height,scale=Math.max(canvas.width/sw,canvas.height/sh),w=sw*scale,h=sh*scale;ctx.fillStyle='#05080b';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(source,(canvas.width-w)/2,(canvas.height-h)/2,w,h);if(textOverlay){ctx.direction='rtl';ctx.textAlign='center';ctx.font='bold 42px Cairo, sans-serif';ctx.lineWidth=5;ctx.strokeStyle='#000';ctx.strokeText(textOverlay,canvas.width/2,canvas.height*.86,canvas.width*.9);ctx.fillStyle='#fff';ctx.fillText(textOverlay,canvas.width/2,canvas.height*.86,canvas.width*.9)}}
-      for(const item of visualClips){
-        const asset=item.asset
+      const playWhoosh=()=>{
+        if(!audioContext||!audioDestination)return
+        const duration=.38,length=Math.floor(audioContext.sampleRate*duration),buffer=audioContext.createBuffer(1,length,audioContext.sampleRate),data=buffer.getChannelData(0)
+        for(let i=0;i<length;i++)data[i]=(Math.random()*2-1)*(1-i/length)
+        const source=audioContext.createBufferSource(),filter=audioContext.createBiquadFilter(),gain=audioContext.createGain()
+        source.buffer=buffer;filter.type='highpass';filter.frequency.value=650;gain.gain.setValueAtTime(.0001,audioContext.currentTime);gain.gain.exponentialRampToValueAtTime(.16,audioContext.currentTime+.06);gain.gain.exponentialRampToValueAtTime(.0001,audioContext.currentTime+duration)
+        source.connect(filter);filter.connect(gain);gain.connect(audioDestination);source.start();source.stop(audioContext.currentTime+duration)
+      }
+      const transitionToBlack=async()=>{
+        const start=performance.now(),duration=360
+        playWhoosh()
+        while(performance.now()-start<duration){const progress=Math.min(1,(performance.now()-start)/duration);ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=progress;ctx.fillStyle='#000';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.globalAlpha=1;await new Promise(r=>requestAnimationFrame(r))}
+      }
+      for(let clipIndex=0;clipIndex<visualClips.length;clipIndex++){
+        const item=visualClips[clipIndex],asset=item.asset
         if(asset.type==='image'){const img=new Image();img.src=asset.url;await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('تعذر فتح الصورة: '+asset.name))});const start=performance.now(),seconds=Math.max(.2,item.out-item.in);while((performance.now()-start)/1000<seconds){drawCover(img);await new Promise(r=>requestAnimationFrame(r))}}
         else{const video=document.createElement('video');video.src=asset.url;video.muted=false;video.volume=1;video.playsInline=true;video.preload='auto';await new Promise((resolve,reject)=>{video.onloadedmetadata=resolve;video.onerror=()=>reject(new Error('تعذر فتح الفيديو: '+asset.name))});if(audioContext&&audioDestination){const source=audioContext.createMediaElementSource(video);source.connect(audioDestination)}video.currentTime=Math.min(item.in,Math.max(0,video.duration-.05));await new Promise(resolve=>{video.onseeked=resolve;setTimeout(resolve,1200)});const end=Math.min(item.out,video.duration);await video.play();while(video.currentTime<end&&!video.ended){drawCover(video);await new Promise(r=>requestAnimationFrame(r))}video.pause()}
+        if(clipIndex<visualClips.length-1)await transitionToBlack()
       }
       if(scheduledAudioDuration>0){const visualSeconds=visualClips.reduce((sum,item)=>sum+Math.max(.2,item.out-item.in),0);const remaining=scheduledAudioDuration-visualSeconds;if(remaining>0)await new Promise(resolve=>setTimeout(resolve,remaining*1000))}
       recorder.stop();await finished
