@@ -104,7 +104,10 @@ export default function App() {
   }
   const prepareVideoPrompt=()=>{
     if(!videoPrompt.trim())return
-    const result=`أنشئ فيديو ${videoStyle} بجودة سينمائية.\nالوصف: ${videoPrompt.trim()}\nالمدة: ${videoDuration} ثوانٍ.\nالأبعاد: ${videoRatio}.\nتقسيم المشاهد: ${videoScenes}.\nحافظ على ثبات شكل الشخصيات والألوان والإضاءة بين اللقطات، مع حركة طبيعية للكاميرا والشخصيات، وتفاصيل واضحة ومناسبة للنشر.`
+    const longForm=Number(videoDuration)>=600
+    const result=longForm
+      ? `أنت مخرج وكاتب سيناريو رسوم متحركة محترف. جهّز خطة إنتاج كاملة لفيلم كرتون ${videoStyle} مدته الإجمالية 10 دقائق، بنسبة أبعاد ${videoRatio}.\\nفكرة القصة: ${videoPrompt.trim()}\\nقسّم الفيلم إلى 60 مشهداً متتابعاً، مدة كل مشهد نحو 10 ثوانٍ. لكل مشهد اكتب: رقم المشهد، وصف الصورة والحركة، الشخصيات الظاهرة، حركة الكاميرا، الحوار العربي، التعليق الصوتي، المؤثرات الصوتية، وبرومبت مستقل جاهز لتوليد هذا المشهد.\\nابدأ بمقدمة جذابة، ثم تصاعد للأحداث ومشكلة واضحة ومغامرة وحل ونهاية مؤثرة. اجعل اللغة عربية سهلة ومناسبة للأطفال، وتجنب العنف المخيف. حافظ بدقة على ثبات ملامح وألوان وملابس الشخصيات والأماكن في جميع المشاهد. اربط نهاية كل مشهد ببداية المشهد التالي.\\nمهم: هذه خطة لإنتاج الفيلم على مشاهد منفصلة ثم تجميعها بالمونتاج، وليست طلباً لتوليد عشر دقائق في لقطة واحدة. لا تختصر المشاهد ولا تكررها.`
+      : `أنشئ فيديو ${videoStyle} بجودة سينمائية.\\nالوصف: ${videoPrompt.trim()}\\nالمدة: ${videoDuration} ثوانٍ.\\nالأبعاد: ${videoRatio}.\\nتقسيم المشاهد: ${videoScenes}.\\nحافظ على ثبات شكل الشخصيات والألوان والإضاءة بين اللقطات، مع حركة طبيعية للكاميرا والشخصيات، وتفاصيل واضحة ومناسبة للنشر.`
     setPreparedPrompt(result)
   }
   const copyPreparedPrompt=async()=>{
@@ -148,7 +151,7 @@ export default function App() {
           <div className="generator-options">{['3D كرتون','أنمي','واقعي سينمائي','رسوم 2D'].map(s=><button key={s} className={videoStyle===s?'chosen':''} onClick={()=>setVideoStyle(s)}>{s}</button>)}</div>
           <div className="generator-fields">
             <div><label>المقاس</label><select value={videoRatio} onChange={e=>setVideoRatio(e.target.value)}><option>9:16</option><option>16:9</option></select></div>
-            <div><label>المدة</label><select value={videoDuration} onChange={e=>setVideoDuration(e.target.value)}><option value="5">5 ثوانٍ</option><option value="10">10 ثوانٍ</option><option value="15">15 ثانية</option></select></div>
+            <div><label>المدة</label><select value={videoDuration} onChange={e=>setVideoDuration(e.target.value)}><option value="5">5 ثوانٍ</option><option value="10">10 ثوانٍ</option><option value="15">15 ثانية</option><option value="600">10 دقائق (خطة 60 مشهداً)</option></select></div>
           </div>
           <label>تكوين المشاهد</label>
           <select value={videoScenes} onChange={e=>setVideoScenes(e.target.value)}><option>مشهد واحد</option><option>عدة لقطات متتابعة</option></select>
