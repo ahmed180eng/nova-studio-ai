@@ -24,6 +24,8 @@ export default function App() {
   const [duration,setDuration]=useState(0)
   const [current,setCurrent]=useState(0)
   const [chat,setChat]=useState('')
+  const [chatMessages,setChatMessages]=useState([{role:'assistant',content:'أهلاً بيك! أنا مساعد NOVA. أقدر أساعدك في الأفكار والسكريبتات وخطة المونتاج والترجمة.'}])
+  const [chatLoading,setChatLoading]=useState(false)
   const [videoPrompt,setVideoPrompt]=useState('')
   const [videoStyle,setVideoStyle]=useState('3D كرتون')
   const [videoRatio,setVideoRatio]=useState('9:16')
@@ -109,10 +111,21 @@ export default function App() {
     if(!preparedPrompt)return
     try{await navigator.clipboard.writeText(preparedPrompt);alert('تم نسخ البرومبت.')}catch{alert('تعذر النسخ تلقائياً؛ يمكنك تحديد النص ونسخه.')}
   }
-  const sendChat=()=>{
-    if(!chat.trim())return
+  const sendChat=async()=>{
+    const message=chat.trim()
+    if(!message||chatLoading)return
+    const history=[...chatMessages,{role:'user',content:message}]
+    setChatMessages(history)
     setChat('')
-    alert('مساعد NOVA: أقدر أجهز لك فكرة وسيناريو وخطة مونتاج. تنفيذ أوامر الذكاء الاصطناعي تلقائياً يحتاج ربط خدمة API آمنة.')
+    setChatLoading(true)
+    try{
+      const response=await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message,history:history.slice(-10)})})
+      const data=await response.json().catch(()=>({}))
+      if(!response.ok)throw new Error(data.error||'حصلت مشكلة في الاتصال بالمساعد.')
+      setChatMessages(prev=>[...prev,{role:'assistant',content:data.reply||'لم يصل رد من المساعد.'}])
+    }catch(error){
+      setChatMessages(prev=>[...prev,{role:'assistant',content:error.message||'تعذر الاتصال. تأكد من إعداد خادم NOVA ومفتاح API.'}])
+    }finally{setChatLoading(false)}
   }
   useEffect(()=>{if(videoRef.current)videoRef.current.volume=volume},[volume,activeAsset?.id])
   const previewSource=activeAsset?.url
@@ -192,9 +205,9 @@ export default function App() {
         <div className="ai-intro"><div className="orb"><WandSparkles size={26}/></div><h3>خلّي الذكاء الاصطناعي يساعدك</h3><p>أدوات تحرير أساسية بدأت تشتغل داخل المشروع.</p></div>
         <div className="quick-actions"><button onClick={()=>setChat('اقترح فكرة ريلز جذابة مدتها 30 ثانية')}><Sparkles/> فكرة فيديو</button><button onClick={()=>setChat('اكتب سيناريو قصير للفيديو')}><Type/> سيناريو</button><button onClick={()=>setChat('اقترح ترتيب اللقطات والانتقالات')}><Scissors/> خطة مونتاج</button><button onClick={()=>setChat('اكتب ترجمة وعناوين مناسبة للفيديو')}><Captions/> عناوين وترجمة</button></div>
         <div style={{padding:'8px 11px',borderTop:'1px solid #292b35'}}><b style={{fontSize:11}}>إضافة نص على المعاينة</b><input value={overlayInput} onChange={e=>setOverlayInput(e.target.value)} placeholder="اكتب النص هنا..." style={{width:'100%',marginTop:6,padding:8,borderRadius:6,background:'#101219',border:'1px solid #343744',color:'white',fontFamily:'inherit'}}/><button className="small-btn" style={{marginTop:6}} onClick={()=>setTextOverlay(overlayInput)}>إضافة النص</button><button className="small-btn" style={{marginTop:6,marginRight:6}} onClick={()=>setTextOverlay('')}>إزالة النص</button></div>
-        <div className="chat-messages"><div className="message assistant"><span className="message-icon"><Bot size={15}/></span><p>أهلاً بيك! استورد الفيديو، أضفه للتايم لاين، وبعدها تقدر تحدد المقطع وتقُصه أو تقسّمه.</p></div></div>
-        <div className="chat-compose"><textarea value={chat} onChange={e=>setChat(e.target.value)} placeholder="اطلب فكرة أو سيناريو..." onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}}}/><button onClick={sendChat}><Send size={17}/></button></div>
-        <div className="secure-note">التصدير المتقدم والذكاء الاصطناعي المتصل سيتم إضافتهما في مراحل لاحقة.</div>
+        <div className="chat-messages">{chatMessages.map((item,index)=><div key={index} className={`message ${item.role==='user'?'user':'assistant'}`}><span className="message-icon">{item.role==='user'?'●':<Bot size={15}/>}</span><p>{item.content}</p></div>)}{chatLoading&&<div className="message assistant"><span className="message-icon"><Bot size={15}/></span><p>مساعد NOVA بيكتب الرد...</p></div>}</div>
+        <div className="chat-compose"><textarea value={chat} onChange={e=>setChat(e.target.value)} placeholder="اكتب طلبك لمساعد NOVA..." disabled={chatLoading} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat()}}}/><button onClick={sendChat} disabled={chatLoading||!chat.trim()} aria-label="إرسال الرسالة"><Send size={17}/></button></div>
+        <div className="secure-note">المساعد يحتاج إعداد OPENAI_API_KEY على الخادم. لا تضع المفتاح داخل التطبيق.</div>
       </aside>
     </div>
     <footer className="statusbar"><span><i className="status-dot"/> جاهز للعمل</span><span>NOVA · محرر فيديو</span><span>واجهة عربية · 16:9</span></footer>
