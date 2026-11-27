@@ -37,6 +37,7 @@ export default function App() {
   const [activeTool,setActiveTool]=useState('الوسائط')
   const [zoom,setZoom]=useState(1)
   const [volume,setVolume]=useState(1)
+  const [exporting,setExporting]=useState(false)
   const videoRef=useRef(null)
   const audioRef=useRef(null)
   const fileRef=useRef(null)
@@ -114,6 +115,32 @@ export default function App() {
     if(!preparedPrompt)return
     try{await navigator.clipboard.writeText(preparedPrompt);alert('تم نسخ البرومبت.')}catch{alert('تعذر النسخ تلقائياً؛ يمكنك تحديد النص ونسخه.')}
   }
+  const exportTimeline=async()=>{
+    const visualClips=clips.map(clip=>({...clip,asset:assets.find(a=>a.id===clip.assetId)})).filter(x=>x.asset&&['image','video'].includes(x.asset.type))
+    if(!visualClips.length){alert('أضف صوراً أو فيديوهات إلى التايم لاين أولاً.');return}
+    if(!window.MediaRecorder||!HTMLCanvasElement.prototype.captureStream){alert('تصدير الفيديو غير مدعوم في هذا المتصفح. افتح NOVA من Chrome على أندرويد.');return}
+    setExporting(true)
+    let recorder
+    try{
+      const portrait=videoRatio==='9:16'
+      const canvas=document.createElement('canvas');canvas.width=portrait?720:1280;canvas.height=portrait?1280:720
+      const ctx=canvas.getContext('2d'),stream=canvas.captureStream(30),chunks=[]
+      const mimeType=['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm'].find(type=>MediaRecorder.isTypeSupported(type))
+      if(!mimeType)throw new Error('المتصفح لا يدعم صيغة تصدير الفيديو المتاحة.')
+      recorder=new MediaRecorder(stream,{mimeType});recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)}
+      const finished=new Promise((resolve,reject)=>{recorder.onstop=resolve;recorder.onerror=()=>reject(new Error('حدث خطأ أثناء تسجيل الفيديو.'))})
+      recorder.start(250)
+      const drawCover=source=>{const sw=source.videoWidth||source.naturalWidth||canvas.width,sh=source.videoHeight||source.naturalHeight||canvas.height,scale=Math.max(canvas.width/sw,canvas.height/sh),w=sw*scale,h=sh*scale;ctx.fillStyle='#05080b';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(source,(canvas.width-w)/2,(canvas.height-h)/2,w,h);if(textOverlay){ctx.direction='rtl';ctx.textAlign='center';ctx.font='bold 42px Cairo, sans-serif';ctx.lineWidth=5;ctx.strokeStyle='#000';ctx.strokeText(textOverlay,canvas.width/2,canvas.height*.86,canvas.width*.9);ctx.fillStyle='#fff';ctx.fillText(textOverlay,canvas.width/2,canvas.height*.86,canvas.width*.9)}}
+      for(const item of visualClips){
+        const asset=item.asset
+        if(asset.type==='image'){const img=new Image();img.src=asset.url;await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error('تعذر فتح الصورة: '+asset.name))});const start=performance.now(),seconds=Math.max(.2,item.out-item.in);while((performance.now()-start)/1000<seconds){drawCover(img);await new Promise(r=>requestAnimationFrame(r))}}
+        else{const video=document.createElement('video');video.src=asset.url;video.muted=true;video.playsInline=true;video.preload='auto';await new Promise((resolve,reject)=>{video.onloadedmetadata=resolve;video.onerror=()=>reject(new Error('تعذر فتح الفيديو: '+asset.name))});video.currentTime=Math.min(item.in,Math.max(0,video.duration-.05));await new Promise(resolve=>{video.onseeked=resolve;setTimeout(resolve,1200)});const end=Math.min(item.out,video.duration);await video.play();while(video.currentTime<end&&!video.ended){drawCover(video);await new Promise(r=>requestAnimationFrame(r))}video.pause()}
+      }
+      recorder.stop();await finished
+      const blob=new Blob(chunks,{type:mimeType}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='NOVA-video.webm';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)
+      alert('تم تصدير الفيديو. الملف بصيغة WebM ويجمع مسار الصور والفيديو فقط؛ الصوت المنفصل لم تتم إضافته بعد.')
+    }catch(error){if(recorder&&recorder.state!=='inactive')recorder.stop();alert(error.message||'تعذر تصدير الفيديو.')}finally{setExporting(false)}
+  }
   const sendChat=async()=>{
     const message=chat.trim()
     if(!message||chatLoading)return
@@ -137,7 +164,7 @@ export default function App() {
     <header className="topbar">
       <div className="brand"><div className="brand-mark"><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M9 30V10l22 20V10" fill="none" stroke="currentColor" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/><path d="M24 15l8 5-8 5z" fill="#07151a"/></svg></div><span>NOVA</span></div>
       <div className="project-name">مشروع بدون عنوان <ChevronDown size={14}/></div>
-      <div className="top-actions"><button className="icon-btn" title="تراجع"><Undo2/></button><button className="icon-btn" title="إعادة"><Redo2/></button><span className="divider-v"/><button className="icon-btn"><HelpCircle/></button><button className="icon-btn"><Settings/></button><button className="export" onClick={()=>alert('التصدير النهائي لكل المسارات قيد التطوير. تقدر حالياً تستورد وتقُص وتقسم وترتب المقاطع داخل التايم لاين.') }><Download size={17}/> تصدير</button></div>
+      <div className="top-actions"><button className="icon-btn" title="تراجع"><Undo2/></button><button className="icon-btn" title="إعادة"><Redo2/></button><span className="divider-v"/><button className="icon-btn"><HelpCircle/></button><button className="icon-btn"><Settings/></button><button className="export" onClick={exportTimeline} disabled={exporting}><Download size={17}/> {exporting?"جاري التصدير...":"تصدير الفيديو"}</button></div>
     </header>
     <div className="workspace">
       <aside className="sidebar">{nav.map(([Icon,label])=><button key={label} className={`nav-item ${activeTool===label?'active':''}`} onClick={()=>setActiveTool(label)}><Icon size={21}/><span>{label}</span></button>)}</aside>
